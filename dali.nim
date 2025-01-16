@@ -1,13 +1,12 @@
+{.experimental: "codeReordering".}
+
 import random
 
 include dex
-
 import dex
 
 # nimble install
 # nim compile -f --run src/dali.nim
-
-{.experimental: "codeReordering".}
 
 proc return_void*(): Instr = return newInstr(0x0e, RawXX(0))
 proc const_string*(reg: uint8, s: String): Instr = return newInstr(0x1a, RegXX(reg), StringXXXX(s))
@@ -15,9 +14,6 @@ proc sget_object*(reg: uint8, field: Field): Instr = return newInstr(0x62, RegXX
 proc invoke_virtual*(regC: dex.uint4, regD: dex.uint4, m: Method): Instr =
   return newInstr(0x6e, RawX(2), RawX(0), MethodXXXX(m), RawX(regD), RegX(regC), RawXX(0))
 proc newInstr*(opcode: uint8, args: varargs[Arg]): Instr = return Instr(opcode: opcode, args: @args)
-
-proc strip_space(s: string): string =
-  return s.multiReplace(("\n", ""), (" ", ""))
 
 proc dehexify(s: string): string =
   result = newString(s.len div 2)
@@ -28,7 +24,7 @@ proc dehexify(s: string): string =
     else:
       result[i] = parseHexStr(chunk)[0]
 
-let hello_world_apk = strip_space"""
+let hello_world_apk = """
 .d .e .x 0A .0 .3 .5 00 6F 53 89 BC 1E 79 B2 4F
 1F 9C 09 66 15 23 2D 3B 56 65 32 C3 B5 81 B4 5A
 70 02 00 00 70 00 00 00 78 56 34 12 00 00 00 00
@@ -68,7 +64,7 @@ EC 00 00 00 01 20 00 00 01 00 00 00 0C 01 00 00
 01 10 00 00 02 00 00 00 2C 01 00 00 02 20 00 00
 0C 00 00 00 3A 01 00 00 00 20 00 00 01 00 00 00
 D1 01 00 00 00 10 00 00 01 00 00 00 DC 01 00 00
-""".dehexify
+""".multiReplace(("\n", ""), (" ", "")).dehexify
 
 
 let dex2 = newDex()
