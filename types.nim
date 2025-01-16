@@ -117,15 +117,3 @@ func equals*(a, b: Arg): bool =
     of ArgKind.MethodXXXX: return a.method16.equals(b.method16)
     else: return false
   return false
-func equals*(a, b: Instr): bool =
-  a.opcode == b.opcode and a.args.equals(b.args)
-func equals*(a, b: Code): bool =
-  a.registers == b.registers and a.ins == b.ins and a.outs == b.outs and a.instrs.equals(b.instrs)
-func equals*(a, b: MaybeCode): bool =
-  a.kind == b.kind and (a.kind == MaybeCodeKind.NoCode or a.code.equals(b.code))
-func equals*(a, b: EncodedMethod): bool =
-  a.m.equals(b.m) and a.access == b.access and a.code.equals(b.code)
-func equals*(a, b: ClassData): bool =
-  a.direct_methods.equals(b.direct_methods) and a.virtual_methods.equals(b.virtual_methods)
-func equals*(a, b: ClassDef): bool =
-  a.class == b.class and a.access == b.access and a.superclass == b.superclass and a.class_data.equals(b.class_data)
