@@ -1,4 +1,3 @@
-{.experimental: "codeReordering".}
 
 import random
 

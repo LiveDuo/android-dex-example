@@ -30,50 +30,6 @@ import blob
 # - https://github.com/linkedin/dexmaker
 # - https://github.com/iBotPeaches/Apktool
 
-#########
-# NOTE(akavel): this must be early, to make sure it's used, as codeReordering fails to move it
-#########
-proc `<`(p1, p2: Prototype): bool =
-  # echo "called <"
-  if p1.ret != p2.ret:
-    return p1.ret < p2.ret
-  for i in 0 ..< min(p1.params.len, p2.params.len):
-    if p1.params[i] != p2.params[i]:
-      return p1.params[i] < p2.params[i]
-  return p1.params.len < p2.params.len
-converter toUint32[T: enum](s: set[T]): uint32 =
-  for v in s:
-    result = result or v.ord.uint32
-#########
-#########
-
-
-
-
-{.experimental: "codeReordering".}
-import hashes
-
-import patty
-
-
-variantp Arg:  # Argument of an instruction of Dalvik bytecode
-  RawX(raw4: uint4)
-  RawXX(raw8: uint8)
-  RawXXXX(raw16: uint16)
-  RegX(reg4: uint4)
-  RegXX(reg8: uint8)
-  FieldXXXX(field16: Field)
-  StringXXXX(string16: String)
-  TypeXXXX(type16: Type)
-  MethodXXXX(method16: Method)
-
-variantp MaybeType:
-  SomeType(typ: Type)
-  NoType
-
-variantp MaybeCode:
-  SomeCode(code: Code)
-  NoCode
 
 
 type
@@ -94,6 +50,25 @@ type
 
   uint4* = range[0..15]   # e.g. register v0..v15
 
+import hashes
+
+import patty
+
+
+variantp Arg:  # Argument of an instruction of Dalvik bytecode
+  RawX(raw4: uint4)
+  RawXX(raw8: uint8)
+  RawXXXX(raw16: uint16)
+  RegX(reg4: uint4)
+  RegXX(reg8: uint8)
+  FieldXXXX(field16: Field)
+  StringXXXX(string16: String)
+  TypeXXXX(type16: Type)
+  MethodXXXX(method16: Method)
+
+
+
+
 type
   Instr* = ref object
     opcode*: uint8
@@ -105,6 +80,17 @@ type
     # tries: ?
     # debug_info: ?
     instrs*: seq[Instr]
+
+
+
+variantp MaybeType:
+  SomeType(typ: Type)
+  NoType
+
+variantp MaybeCode:
+  SomeCode(code: Code)
+  NoCode
+
 
 type
   ClassDef* = ref object
@@ -159,6 +145,9 @@ func equals[T](a, b: seq[T]): bool =
   return true
 
 
+
+
+
 type SortedSet*[T] = distinct seq[T]
 
 proc init*[T](s: var SortedSet[T]) {.inline.} = s = SortedSet[T](newSeq[T]())
@@ -189,8 +178,7 @@ iterator items*[T](s: SortedSet[T]): T =
   for item in seq[T](s):
     yield item
 
-proc newDex*(): Dex =
-  new(result)
+
 
 type
   Dex* = ref object
@@ -209,6 +197,192 @@ type
     # (class type ID, name's string ID, prototype's proto ID)
     methods: SortedSet[tuple[class: Type, name: string, proto: Prototype]]
     classes*: seq[ClassDef]
+
+
+proc newDex*(): Dex =
+  new(result)
+
+proc `<`(p1, p2: Prototype): bool =
+  # echo "called <"
+  if p1.ret != p2.ret:
+    return p1.ret < p2.ret
+  for i in 0 ..< min(p1.params.len, p2.params.len):
+    if p1.params[i] != p2.params[i]:
+      return p1.params[i] < p2.params[i]
+  return p1.params.len < p2.params.len
+converter toUint32[T: enum](s: set[T]): uint32 =
+  for v in s:
+    result = result or v.ord.uint32
+#########
+#########
+
+
+proc descriptor(proto: Prototype): string =
+  proc typeChar(t: Type): string =
+    if t.len==1 and t[0] in {'V','Z','B','S','C','I','J','F','D'}:
+      return t
+    elif t.len>=1 and t[0] in {'[','L'}:
+      return "L"
+    else:
+      raise newException(ConsistencyError, "unexpected type in prototype: " & t)
+
+  return (proto.ret & proto.params).map(typeChar).join
+
+
+proc addStr(dex: Dex, s: string) =
+  if s.contains({'\x00', '\x80'..'\xFF'}):
+    raise newException(NotImplementedYetError, "strings with 0x00 or 0x80..0xFF bytes are not yet supported")
+  discard dex.strings.containsOrIncl(s, dex.strings.len)
+  # "This list must be sorted by string contents, using UTF-16 code point
+  # values (not in a locale-sensitive manner), and it must not contain any
+  # duplicate entries." [dex-format] <- I think this is guaranteed by UTF-8 + CritBitTree type
+
+
+proc addType(dex: Dex, t: Type) =
+  dex.addStr(t)
+  dex.types.incl(t)
+
+
+proc addField(dex: Dex, f: Field) =
+  dex.addType(f.class)
+  dex.addType(f.typ)
+  dex.addStr(f.name)
+  dex.fields.incl((f.class, f.name, f.typ))
+
+proc addTypeList(dex: Dex, ts: seq[Type]) =
+  if ts.len == 0:
+    return
+  for t in ts:
+    dex.addType(t)
+  if ts notin dex.typeLists:
+    dex.typeLists.add(ts)
+
+proc addPrototype(dex: Dex, proto: Prototype) =
+  dex.addType(proto.ret)
+  dex.addTypeList(proto.params)
+  dex.prototypes.incl(proto)
+  dex.addStr(proto.descriptor)
+
+proc addMethod(dex: Dex, m: Method) =
+  dex.addType(m.class)
+  dex.addPrototype(m.prototype)
+  dex.addStr(m.name)
+  dex.methods.incl((m.class, m.name, m.prototype))
+
+
+
+
+
+
+
+proc stringsOrdering(dex: Dex): seq[int] =
+  var i = 0
+  result.setLen dex.strings.len
+  for s, added in dex.strings:
+    result[added] = i
+    inc i
+
+proc stringsAsAdded(dex: Dex): seq[string] =
+  result.setLen dex.strings.len
+  for s, added in dex.strings:
+    result[added] = s
+
+func asTuple(f: Field): tuple[class: Type, name: string, typ: Type] =
+  return (class: f.class, name: f.name, typ: f.typ)
+func asTuple(m: Method): tuple[class: Type, name: string, proto: Prototype] =
+  return (class: m.class, name: m.name, proto: m.prototype)
+
+proc adler32(s: string): uint32 =
+  # https://en.wikipedia.org/wiki/Adler-32
+  var a: uint32 = 1
+  var b: uint32 = 0
+  const MOD_ADLER = 65521
+  for c in s:
+    a = (a + c.uint32) mod MOD_ADLER
+    b = (b + a) mod MOD_ADLER
+  result = (b shl 16) or a
+
+proc renderInstrs(dex: Dex, blob: var Blob, instrs: openArray[Instr], stringIds: openArray[int]) =
+  var
+    high = true
+  for instr in instrs:
+    blob.putc instr.opcode.chr
+    for arg in instr.args:
+      # FIXME(akavel): padding
+      match arg:
+        RawX(v):
+          blob.put4 v, high
+          high = not high
+        RawXX(v):
+          blob.putc v.chr
+        RawXXXX(v):
+          blob.put16 v
+        RegX(v):
+          blob.put4 v, high
+          high = not high
+        RegXX(v):
+          blob.putc v.chr
+        FieldXXXX(v):
+          blob.put16 dex.fields.search((v.class, v.name, v.typ)).uint16
+        StringXXXX(v):
+          blob.put16 stringIds[dex.strings[v]].uint16
+        TypeXXXX(v):
+          blob.put16 dex.types.search(v).uint16
+        MethodXXXX(v):
+          blob.put16 dex.methods.search((v.class, v.name, v.prototype)).uint16
+
+
+proc collect(dex: Dex) =
+  # Collect strings and all the things from classes.
+  # (types, prototypes/signatures, fields, methods)
+  for c in dex.classes:
+    dex.addType(c.class)
+    if c.superclass.kind == MaybeTypeKind.SomeType:
+      dex.addType(c.superclass.typ)
+    let cd = c.class_data
+    for f in cd.instance_fields:
+      dex.addField(f.f)
+    for dm in cd.direct_methods & cd.virtual_methods:
+      dex.addMethod(dm.m)
+      if dm.code.kind == MaybeCodeKind.SomeCode:
+        for instr in dm.code.code.instrs:
+          for arg in instr.args:
+            match arg:
+              RawX(_): discard
+              RawXX(_): discard
+              RawXXXX(_): discard
+              RegX(_): discard
+              RegXX(_): discard
+              FieldXXXX(f):
+                dex.addField(f)
+              StringXXXX(s):
+                dex.addStr(s)
+              TypeXXXX(t):
+                dex.addType(t)
+              MethodXXXX(m):
+                dex.addMethod(m)
+
+proc renderEncodedFields(dex: Dex, blob: var Blob, fields: openArray[EncodedField]) =
+  var prev = 0
+  for f in fields:
+    let tupl = f.f.asTuple
+    let idx = dex.fields.search(tupl)
+    blob.put_uleb128 uint32(idx - prev)
+    prev = idx
+    blob.put_uleb128 f.access.toUint32
+
+proc renderEncodedMethods(dex: Dex, blob: var Blob, methods: openArray[EncodedMethod], codeOffsets: Table[tuple[class: Type, name: string, proto: Prototype], uint32]) =
+  var prev = 0
+  for m in methods:
+    let tupl = m.m.asTuple
+    let idx = dex.methods.search(tupl)
+    blob.put_uleb128 uint32(idx - prev)
+    prev = idx
+    blob.put_uleb128 m.access.toUint32
+    if Native notin m.access and Abstract notin m.access:
+      blob.put_uleb128 codeOffsets[tupl]
+    else:
+      blob.put_uleb128 0
 
 
 proc render*(dex: Dex): string =
@@ -434,162 +608,3 @@ proc render*(dex: Dex): string =
   # stderr.write("\n")
 
   return blob.string
-
-
-proc collect(dex: Dex) =
-  # Collect strings and all the things from classes.
-  # (types, prototypes/signatures, fields, methods)
-  for c in dex.classes:
-    dex.addType(c.class)
-    if c.superclass.kind == MaybeTypeKind.SomeType:
-      dex.addType(c.superclass.typ)
-    let cd = c.class_data
-    for f in cd.instance_fields:
-      dex.addField(f.f)
-    for dm in cd.direct_methods & cd.virtual_methods:
-      dex.addMethod(dm.m)
-      if dm.code.kind == MaybeCodeKind.SomeCode:
-        for instr in dm.code.code.instrs:
-          for arg in instr.args:
-            match arg:
-              RawX(_): discard
-              RawXX(_): discard
-              RawXXXX(_): discard
-              RegX(_): discard
-              RegXX(_): discard
-              FieldXXXX(f):
-                dex.addField(f)
-              StringXXXX(s):
-                dex.addStr(s)
-              TypeXXXX(t):
-                dex.addType(t)
-              MethodXXXX(m):
-                dex.addMethod(m)
-
-proc renderEncodedFields(dex: Dex, blob: var Blob, fields: openArray[EncodedField]) =
-  var prev = 0
-  for f in fields:
-    let tupl = f.f.asTuple
-    let idx = dex.fields.search(tupl)
-    blob.put_uleb128 uint32(idx - prev)
-    prev = idx
-    blob.put_uleb128 f.access.toUint32
-
-proc renderEncodedMethods(dex: Dex, blob: var Blob, methods: openArray[EncodedMethod], codeOffsets: Table[tuple[class: Type, name: string, proto: Prototype], uint32]) =
-  var prev = 0
-  for m in methods:
-    let tupl = m.m.asTuple
-    let idx = dex.methods.search(tupl)
-    blob.put_uleb128 uint32(idx - prev)
-    prev = idx
-    blob.put_uleb128 m.access.toUint32
-    if Native notin m.access and Abstract notin m.access:
-      blob.put_uleb128 codeOffsets[tupl]
-    else:
-      blob.put_uleb128 0
-
-proc renderInstrs(dex: Dex, blob: var Blob, instrs: openArray[Instr], stringIds: openArray[int]) =
-  var
-    high = true
-  for instr in instrs:
-    blob.putc instr.opcode.chr
-    for arg in instr.args:
-      # FIXME(akavel): padding
-      match arg:
-        RawX(v):
-          blob.put4 v, high
-          high = not high
-        RawXX(v):
-          blob.putc v.chr
-        RawXXXX(v):
-          blob.put16 v
-        RegX(v):
-          blob.put4 v, high
-          high = not high
-        RegXX(v):
-          blob.putc v.chr
-        FieldXXXX(v):
-          blob.put16 dex.fields.search((v.class, v.name, v.typ)).uint16
-        StringXXXX(v):
-          blob.put16 stringIds[dex.strings[v]].uint16
-        TypeXXXX(v):
-          blob.put16 dex.types.search(v).uint16
-        MethodXXXX(v):
-          blob.put16 dex.methods.search((v.class, v.name, v.prototype)).uint16
-
-
-proc addField(dex: Dex, f: Field) =
-  dex.addType(f.class)
-  dex.addType(f.typ)
-  dex.addStr(f.name)
-  dex.fields.incl((f.class, f.name, f.typ))
-
-proc addMethod(dex: Dex, m: Method) =
-  dex.addType(m.class)
-  dex.addPrototype(m.prototype)
-  dex.addStr(m.name)
-  dex.methods.incl((m.class, m.name, m.prototype))
-
-proc addPrototype(dex: Dex, proto: Prototype) =
-  dex.addType(proto.ret)
-  dex.addTypeList(proto.params)
-  dex.prototypes.incl(proto)
-  dex.addStr(proto.descriptor)
-
-proc descriptor(proto: Prototype): string =
-  proc typeChar(t: Type): string =
-    if t.len==1 and t[0] in {'V','Z','B','S','C','I','J','F','D'}:
-      return t
-    elif t.len>=1 and t[0] in {'[','L'}:
-      return "L"
-    else:
-      raise newException(ConsistencyError, "unexpected type in prototype: " & t)
-
-  return (proto.ret & proto.params).map(typeChar).join
-
-proc addTypeList(dex: Dex, ts: seq[Type]) =
-  if ts.len == 0:
-    return
-  for t in ts:
-    dex.addType(t)
-  if ts notin dex.typeLists:
-    dex.typeLists.add(ts)
-
-proc addType(dex: Dex, t: Type) =
-  dex.addStr(t)
-  dex.types.incl(t)
-
-proc addStr(dex: Dex, s: string) =
-  if s.contains({'\x00', '\x80'..'\xFF'}):
-    raise newException(NotImplementedYetError, "strings with 0x00 or 0x80..0xFF bytes are not yet supported")
-  discard dex.strings.containsOrIncl(s, dex.strings.len)
-  # "This list must be sorted by string contents, using UTF-16 code point
-  # values (not in a locale-sensitive manner), and it must not contain any
-  # duplicate entries." [dex-format] <- I think this is guaranteed by UTF-8 + CritBitTree type
-
-proc stringsOrdering(dex: Dex): seq[int] =
-  var i = 0
-  result.setLen dex.strings.len
-  for s, added in dex.strings:
-    result[added] = i
-    inc i
-
-proc stringsAsAdded(dex: Dex): seq[string] =
-  result.setLen dex.strings.len
-  for s, added in dex.strings:
-    result[added] = s
-
-func asTuple(f: Field): tuple[class: Type, name: string, typ: Type] =
-  return (class: f.class, name: f.name, typ: f.typ)
-func asTuple(m: Method): tuple[class: Type, name: string, proto: Prototype] =
-  return (class: m.class, name: m.name, proto: m.prototype)
-
-proc adler32(s: string): uint32 =
-  # https://en.wikipedia.org/wiki/Adler-32
-  var a: uint32 = 1
-  var b: uint32 = 0
-  const MOD_ADLER = 65521
-  for c in s:
-    a = (a + c.uint32) mod MOD_ADLER
-    b = (b + a) mod MOD_ADLER
-  result = (b shl 16) or a
