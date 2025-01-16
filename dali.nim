@@ -1,7 +1,7 @@
 import random
 include dali/dex
 include dali/instrs
-include dali/utils/blob
+include dali/blob
 
 # nimble install
 # nim compile -f --run src/dali.nim

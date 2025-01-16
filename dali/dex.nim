@@ -7,9 +7,8 @@ import tables
 
 import patty
 
-import utils/blob
-import utils/sortedset
-
+import blob
+import sortedset
 import types
 
 # Potentially useful bibliography
