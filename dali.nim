@@ -2,7 +2,6 @@ import random
 
 include dex
 
-import blob
 import dex
 
 # nimble install
