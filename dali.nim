@@ -8,6 +8,33 @@ import dex
 # nimble install
 # nim compile -f --run src/dali.nim
 
+const HexChars = "0123456789ABCDEF"
+
+func printable(c: char): bool =
+  let n = ord(c)
+  return 0x21 <= n and n <= 0x7E
+
+proc dumpHex(s: string): string =
+  if s.len == 0: return ""
+  let nlines = (s.len + 15) div 16
+  const
+    left = 3*8 + 2 + 3*8 + 2
+    right = 16
+    line = left+right+1
+  result = ' '.repeat(nlines*line)
+  for i, ch in s:
+    let
+      y = i div 16
+      xr = i mod 16
+      xl = if xr < 8: 3*xr else: 3*xr + 1
+      n = ord(ch)
+    result[y*line + xl] = HexChars[n shr 4]
+    result[y*line + xl + 1] = HexChars[n and 0x0F]
+    result[y*line + left + xr - 1] = if printable(ch): ch else: '.'
+    if xr == 0:
+      result[y*line + left + right - 1] = '\n'
+  result = "\n " & result
+
 proc dehexify(s: string): string =
   result = newString(s.len div 2)
   for i in 0 ..< s.len div 2:
@@ -75,33 +102,6 @@ dex2.classes.add(ClassDef(
         ]
     )
 ))
-
-const HexChars = "0123456789ABCDEF"
-
-func printable(c: char): bool =
-  let n = ord(c)
-  return 0x21 <= n and n <= 0x7E
-
-proc dumpHex(s: string): string =
-  if s.len == 0: return ""
-  let nlines = (s.len + 15) div 16
-  const
-    left = 3*8 + 2 + 3*8 + 2
-    right = 16
-    line = left+right+1
-  result = ' '.repeat(nlines*line)
-  for i, ch in s:
-    let
-      y = i div 16
-      xr = i mod 16
-      xl = if xr < 8: 3*xr else: 3*xr + 1
-      n = ord(ch)
-    result[y*line + xl] = HexChars[n shr 4]
-    result[y*line + xl + 1] = HexChars[n and 0x0F]
-    result[y*line + left + xr - 1] = if printable(ch): ch else: '.'
-    if xr == 0:
-      result[y*line + left + right - 1] = '\n'
-  result = "\n " & result
 
 assert dex2.render.dumpHex == hello_world_apk.dumpHex
 # echo dex2.render.dumpHex
