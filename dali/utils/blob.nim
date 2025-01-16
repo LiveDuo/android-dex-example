@@ -1,4 +1,4 @@
-{.experimental: "codeReordering".}
+# {.experimental: "codeReordering".}
 import bitops
 import tables
 
@@ -109,4 +109,3 @@ proc setAll*[T](slots: Slots32[T], key: T, val: uint32, blob: var Blob) =
     return
   for slot in slots.TSlots32[:T][key]:
     blob.set(slot, val)
-

@@ -1,9 +1,10 @@
 import random
 include dali/dex
 include dali/instrs
+include dali/utils/blob
 
 # nimble install
-# nim compile --run src/dali.nim
+# nim compile -f --run src/dali.nim
 
 {.experimental: "codeReordering".}
 

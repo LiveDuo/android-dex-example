@@ -1,4 +1,4 @@
-{.experimental: "codeReordering".}
+
 import critbits
 import strutils
 import sequtils
@@ -7,10 +7,10 @@ import tables
 
 import patty
 
-import dali/utils/blob
-import dali/utils/sortedset
+import utils/blob
+import utils/sortedset
 
-import dali/types
+import types
 
 # Potentially useful bibliography
 #

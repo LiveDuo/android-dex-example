@@ -1,6 +1,5 @@
-{.experimental: "codeReordering".}
 
-import dali/types
+import types
 
 proc move_result_object*(reg: uint8): Instr =
   return newInstr(0x0c, RegXX(reg))
