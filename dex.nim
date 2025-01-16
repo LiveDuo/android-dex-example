@@ -13,7 +13,7 @@ import blob
 #
 # DEX:
 # - https://github.com/corkami/pics/blob/master/binary/DalvikEXecutable.pdf
-# - [dex-format]: https://source.android.com/devices/tech/dalvik/dex-format
+# - https://source.android.com/devices/tech/dalvik/dex-format
 # - https://blog.bugsnag.com/dex-and-d8/
 # - http://benlynn.blogspot.com/2009/02/minimal-dalvik-executables_06.html
 #
