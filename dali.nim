@@ -8,21 +8,12 @@ import dex
 # nimble install
 # nim compile -f --run src/dali.nim
 
-proc return_void*(): Instr = return newInstr(0x0e, RawXX(0))
-proc const_string*(reg: uint8, s: String): Instr = return newInstr(0x1a, RegXX(reg), StringXXXX(s))
-proc sget_object*(reg: uint8, field: Field): Instr = return newInstr(0x62, RegXX(reg), FieldXXXX(field))
-proc invoke_virtual*(regC: dex.uint4, regD: dex.uint4, m: Method): Instr =
-  return newInstr(0x6e, RawX(2), RawX(0), MethodXXXX(m), RawX(regD), RegX(regC), RawXX(0))
-proc newInstr*(opcode: uint8, args: varargs[Arg]): Instr = return Instr(opcode: opcode, args: @args)
-
 proc dehexify(s: string): string =
   result = newString(s.len div 2)
   for i in 0 ..< s.len div 2:
     let chunk = s.substr(2 * i, 2 * i + 1)
-    if chunk[0] == '.':
-      result[i] = chunk[1]
-    else:
-      result[i] = parseHexStr(chunk)[0]
+    if chunk[0] == '.': result[i] = chunk[1]
+    else: result[i] = parseHexStr(chunk)[0]
 
 let hello_world_apk = """
 .d .e .x 0A .0 .3 .5 00 6F 53 89 BC 1E 79 B2 4F 1F 9C 09 66 15 23 2D 3B 56 65 32 C3 B5 81 B4 5A
@@ -47,6 +38,14 @@ A0 00 00 00 03 00 00 00 02 00 00 00 BC 00 00 00 04 00 00 00 01 00 00 00 D4 00 00
 D1 01 00 00 00 10 00 00 01 00 00 00 DC 01 00 00
 """.multiReplace(("\n", ""), (" ", "")).dehexify
 
+
+proc newInstr*(opcode: uint8, args: varargs[Arg]): Instr = return Instr(opcode: opcode, args: @args)
+
+proc return_void*(): Instr = return newInstr(0x0e, RawXX(0))
+proc const_string*(reg: uint8, s: String): Instr = return newInstr(0x1a, RegXX(reg), StringXXXX(s))
+proc sget_object*(reg: uint8, field: Field): Instr = return newInstr(0x62, RegXX(reg), FieldXXXX(field))
+proc invoke_virtual*(regC: dex.uint4, regD: dex.uint4, m: Method): Instr =
+  return newInstr(0x6e, RawX(2), RawX(0), MethodXXXX(m), RawX(regD), RegX(regC), RawXX(0))
 
 let dex2 = newDex()
 dex2.classes.add(ClassDef(
