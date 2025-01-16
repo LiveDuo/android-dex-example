@@ -20,36 +20,36 @@ proc const_string*(reg: uint8, s: String): Instr =
 proc new_instance*(reg: uint8, t: Type): Instr =
   return newInstr(0x22, RegXX(reg), TypeXXXX(t))
 
-proc iget_wide*(regsA: uint4, regB: uint4, field: Field): Instr =
+proc iget_wide*(regsA: types.uint4, regB: types.uint4, field: Field): Instr =
   return newInstr(0x53, RegX(regB), RegX(regsA), FieldXXXX(field))
-proc iput_wide*(regsA: uint4, regB: uint4, field: Field): Instr =
+proc iput_wide*(regsA: types.uint4, regB: types.uint4, field: Field): Instr =
   return newInstr(0x5a, RegX(regB), RegX(regsA), FieldXXXX(field))
 
 proc sget_object*(reg: uint8, field: Field): Instr =
   return newInstr(0x62, RegXX(reg), FieldXXXX(field))
 
-proc invoke_virtual*(regC: uint4, m: Method): Instr =
+proc invoke_virtual*(regC: types.uint4, m: Method): Instr =
   return newInvoke1(0x6e, regC, m)
-proc invoke_virtual*(regC: uint4, regD: uint4, m: Method): Instr =
+proc invoke_virtual*(regC: types.uint4, regD: types.uint4, m: Method): Instr =
   return newInvoke2(0x6e, regC, regD, m)
 
-proc invoke_super*(regC: uint4, regD: uint4, m: Method): Instr =
+proc invoke_super*(regC: types.uint4, regD: types.uint4, m: Method): Instr =
   return newInvoke2(0x6f, regC, regD, m)
 
-proc invoke_direct*(regC: uint4, m: Method): Instr =
+proc invoke_direct*(regC: types.uint4, m: Method): Instr =
   return newInvoke1(0x70, regC, m)
-proc invoke_direct*(regC: uint4, regD: uint4, m: Method): Instr =
+proc invoke_direct*(regC: types.uint4, regD: types.uint4, m: Method): Instr =
   return newInvoke2(0x70, regC, regD, m)
 
-proc invoke_static*(regC: uint4, m: Method): Instr =
+proc invoke_static*(regC: types.uint4, m: Method): Instr =
   return newInvoke1(0x71, regC, m)
-proc invoke_static*(regC, regD: uint4, m: Method): Instr =
+proc invoke_static*(regC, regD: types.uint4, m: Method): Instr =
   return newInvoke2(0x71, regC, regD, m)
 
 
-proc newInvoke1*(opcode: uint8, regC: uint4, m: Method): Instr =
+proc newInvoke1*(opcode: uint8, regC: types.uint4, m: Method): Instr =
   return newInstr(opcode, RawX(1), RawX(0), MethodXXXX(m), RawX(0), RegX(regC), RawXX(0))
-proc newInvoke2*(opcode: uint8, regC: uint4, regD: uint4, m: Method): Instr =
+proc newInvoke2*(opcode: uint8, regC: types.uint4, regD: types.uint4, m: Method): Instr =
   return newInstr(opcode, RawX(2), RawX(0), MethodXXXX(m), RawX(regD), RegX(regC), RawXX(0))
 
 proc newInstr*(opcode: uint8, args: varargs[Arg]): Instr =
@@ -61,4 +61,3 @@ proc newInstr*(opcode: uint8, args: varargs[Arg]): Instr =
   ## words should not have contents rotated (just fill
   ## them as in the spec).
   return Instr(opcode: opcode, args: @args)
-

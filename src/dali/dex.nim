@@ -454,4 +454,3 @@ proc adler32(s: string): uint32 =
     a = (a + c.uint32) mod MOD_ADLER
     b = (b + a) mod MOD_ADLER
   result = (b shl 16) or a
-

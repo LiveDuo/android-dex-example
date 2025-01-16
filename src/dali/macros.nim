@@ -90,7 +90,7 @@ proc typeLetter(fullType: string): string =
   else: ""
 
 proc handleJavaType(n: NimNode): NimNode =
-  ## handleJavaType checks if n is an identifer corresponding to a Java type name.
+  ## handleJavaType checks if n is an identifier corresponding to a Java type name.
   ## If yes, it returns a string literal with a one-letter code of this type. Otherwise,
   ## it returns a copy of the original node n.
   let coded = n.strVal.typeLetter
@@ -294,7 +294,7 @@ proc dclass2ClassDef(header, body: NimNode): NimNode =
           SomeType(`super`)
     directMethodsTree = newTree(nnkBracket, directMethods)
     virtualMethodsTree = newTree(nnkBracket, virtualMethods)
-  # TODO: also, create a `let` identifer for the class name
+  # TODO: also, create a `let` identifier for the class name
   result = quote do:
     ClassDef(
       class: `classTree`,
@@ -340,7 +340,7 @@ proc parseDClassHeader(header: NimNode): DClassHeaderInfo =
       error "expected pragmas list", rest[1]
     for p in rest[1]:
       if p !~ Ident(_):
-        error "expected a simple pragma identifer", p
+        error "expected a simple pragma identifier", p
       let x = ident(p.strVal.capitalizeAscii)
       if x.strVal.eqIdent "NimSelf":
         result.hasNimSelf = true
