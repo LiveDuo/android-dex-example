@@ -1,8 +1,9 @@
 import random
 
 include dex
+
 import blob
-import types
+import dex
 
 # nimble install
 # nim compile -f --run src/dali.nim
@@ -12,7 +13,7 @@ import types
 proc return_void*(): Instr = return newInstr(0x0e, RawXX(0))
 proc const_string*(reg: uint8, s: String): Instr = return newInstr(0x1a, RegXX(reg), StringXXXX(s))
 proc sget_object*(reg: uint8, field: Field): Instr = return newInstr(0x62, RegXX(reg), FieldXXXX(field))
-proc invoke_virtual*(regC: types.uint4, regD: types.uint4, m: Method): Instr =
+proc invoke_virtual*(regC: dex.uint4, regD: dex.uint4, m: Method): Instr =
   return newInstr(0x6e, RawX(2), RawX(0), MethodXXXX(m), RawX(regD), RegX(regC), RawXX(0))
 proc newInstr*(opcode: uint8, args: varargs[Arg]): Instr = return Instr(opcode: opcode, args: @args)
 
