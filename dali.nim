@@ -5,7 +5,7 @@ include dex
 import dex
 
 # nimble install
-# nim compile -f --run src/dali.nim
+# nim compile -f --run dali.nim
 
 const HexChars = "0123456789ABCDEF"
 
@@ -103,6 +103,9 @@ dex2.classes.add(ClassDef(
 ))
 
 assert dex2.render.dumpHex == hello_world_apk.dumpHex
+
+writeFile("classes.dex", hello_world_apk)
+
 # echo dex2.render.dumpHex
 
 randomize()
