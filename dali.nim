@@ -9,10 +9,6 @@ import dex
 
 const HexChars = "0123456789ABCDEF"
 
-func printable(c: char): bool =
-  let n = ord(c)
-  return 0x21 <= n and n <= 0x7E
-
 proc dumpHex(s: string): string =
   if s.len == 0: return ""
   let nlines = (s.len + 15) div 16
@@ -29,7 +25,7 @@ proc dumpHex(s: string): string =
       n = ord(ch)
     result[y*line + xl] = HexChars[n shr 4]
     result[y*line + xl + 1] = HexChars[n and 0x0F]
-    result[y*line + left + xr - 1] = if printable(ch): ch else: '.'
+    result[y*line + left + xr - 1] = if 0x21 <= ord(ch) and ord(ch) <= 0x7E: ch else: '.'
     if xr == 0:
       result[y*line + left + right - 1] = '\n'
   result = "\n " & result
