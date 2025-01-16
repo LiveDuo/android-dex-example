@@ -162,7 +162,7 @@ proc renderDex(dex: Dex, filename: string) =
   var f: File
   if f.open(filename, fmWrite):
     try:
-      f.writeBuffer(buf[0].unsafeAddr, buf.len)
+      discard f.writeBuffer(buf[0].unsafeAddr, buf.len)
     finally:
       close(f)
   else:
@@ -426,4 +426,3 @@ proc extractParams(procDef: NimNode): seq[tuple[name, typ: NimNode]] =
     if p[^1] !~ Empty(): error "default param values not supported", p[^1]
     for name in p[0..^3]:
       result.add (name, p[^2])
-

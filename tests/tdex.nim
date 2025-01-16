@@ -1,6 +1,8 @@
+# nimble install
+# nim c -r tests/tdex.nim
+
 {.experimental: "codeReordering".}
 import unittest
-import strutils
 include dali/dex
 import dali
 
@@ -386,4 +388,3 @@ proc dumpHex(s: string): string =
     if xr == 0:
       result[y*line + left + right - 1] = '\n'
   result = "\n " & result
-
