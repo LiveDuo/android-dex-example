@@ -1,3 +1,5 @@
+# https://github.com/andreaferretti/patty/blob/master/patty.nim
+
 import macros, sequtils
 
 const enumSuffix = "Kind"
