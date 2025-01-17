@@ -86,9 +86,9 @@ dex2.classes.add(ClassDef(
           instrs: @[
             invoke_super(1, 2, Method(class: "Landroid/app/Activity;", name: "onCreate",
               prototype: Prototype(ret: "V", params: @["Landroid/os/Bundle;"]))),
-            const_high16(0, 0x7f03),
-            invoke_virtual(1, 0, Method(class: "Lcom/andreas/hello/HelloAndroid;", name: "setContentView",
-              prototype: Prototype(ret: "V", params: @["I"]))),
+            # const_high16(0, 0x7f03),
+            # invoke_virtual(1, 0, Method(class: "Lcom/andreas/hello/HelloAndroid;", name: "setContentView",
+            #   prototype: Prototype(ret: "V", params: @["I"]))),
             return_void(),
           ],
         )),
