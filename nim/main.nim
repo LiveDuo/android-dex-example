@@ -1,22 +1,9 @@
 
 include dex
-import dex
 
 # nim compile -f --run nim/main.nim
 
 let dex2 = newDex()
-dex2.addStr"<init>"
-dex2.addStr"I"
-dex2.addStr"Landroid/app/Activity;"
-dex2.addStr"Landroid/os/Bundle;"
-dex2.addStr"Lcom/andreas/hello/HelloAndroid;"
-dex2.addStr"V"
-dex2.addStr"VI"
-dex2.addStr"VL"
-dex2.addStr"onCreate"
-dex2.addStr"setContentView"
-dex2.addTypeList(@["I"])
-
 dex2.classes.add(ClassDef(
   class: "Lcom/andreas/hello/HelloAndroid;",
   access: {Public},
@@ -47,10 +34,7 @@ dex2.classes.add(ClassDef(
         m: Method(
           class: "Lcom/andreas/hello/HelloAndroid;",
           name: "onCreate",
-          prototype: Prototype(
-            ret: "V",
-            params: @["Landroid/os/Bundle;"],
-          ),
+          prototype: Prototype(ret: "V", params: @["Landroid/os/Bundle;"]),
         ),
         access: {Public},
         code: SomeCode(Code(
