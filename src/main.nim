@@ -1,10 +1,10 @@
 
-include dex
+import dex
 
 # nim r -f src/main.nim
 
-let dex2 = newDex()
-dex2.classes.add(ClassDef(
+let dexData = dex.newDex()
+dexData.classes.add(ClassDef(
   class: "Lcom/andreas/hello/HelloAndroid;",
   access: {Public},
   superclass: SomeType("Landroid/app/Activity;"),
@@ -59,4 +59,4 @@ dex2.classes.add(ClassDef(
     ],
   )
 ))
-writeFile("/tmp/android-build/apk/classes.dex", dex2.render)
+writeFile("/tmp/android-build/apk/classes.dex", dexData.render)
