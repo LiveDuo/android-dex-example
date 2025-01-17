@@ -5,6 +5,7 @@ mkdir -p "/tmp/android-build"
 BUILD_DIR=$(realpath "/tmp/android-build")
 
 ### create apk
+mkdir -p "/tmp/android-build/apk"
 ANDROID_JAR="$(ls -d ${SDK}/platforms/*/ | tail -n 1)/android.jar"
 BUILD_TOOLS=$(ls -d ${SDK}/build-tools/*/ | tail -n 1)
 java -jar ./smali/smali.jar assemble ./smali -o ${BUILD_DIR}/apk/classes.dex
