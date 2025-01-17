@@ -4,7 +4,7 @@ import dex
 include hex
 
 # nimble install
-# nim compile -f --run dali.nim
+# nim compile -f --run nim/main.nim
 
 proc newInstr*(opcode: uint8, args: varargs[Arg]): Instr = return Instr(opcode: opcode, args: @args)
 
@@ -96,4 +96,4 @@ dex2.classes.add(ClassDef(
     ],
   )
 ))
-writeFile("classes.dex", dex2.render)
+writeFile("/tmp/android-build/apk/classes.dex", dex2.render)
