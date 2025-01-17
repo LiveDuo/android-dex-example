@@ -4,6 +4,7 @@ import strutils
 import sequtils
 import std/sha1
 import tables
+import hashes
 
 import patty
 
@@ -49,10 +50,6 @@ type
   TypeList* = seq[Type]
 
   uint4* = range[0..15]   # e.g. register v0..v15
-
-import hashes
-
-import patty
 
 
 variantp Arg:  # Argument of an instruction of Dalvik bytecode
