@@ -6,7 +6,6 @@ import std/sha1
 import tables
 import hashes
 import bitops
-import tables
 
 import patty
 
@@ -138,10 +137,8 @@ proc add*[T](slots: var Slots32[T], key: T, val: Slot32) =
   slots.TSlots32[:T].mgetOrPut(key, newSeq[Slot32]()).add(val)
 
 proc setAll*[T](slots: Slots32[T], key: T, val: uint32, blob: var Blob) =
-  if not slots.TSlots32[:T].contains(key):
-    return
-  for slot in slots.TSlots32[:T][key]:
-    blob.set(slot, val)
+  if not slots.TSlots32[:T].contains(key): return
+  for slot in slots.TSlots32[:T][key]: blob.set(slot, val)
 
 
 type
@@ -184,8 +181,6 @@ type
     registers*: uint16
     ins*: uint16
     outs*: uint16 # "the number of words of outgoing argument space required by this code for method invocation"
-    # tries: ?
-    # debug_info: ?
     instrs*: seq[Instr]
 
 
@@ -204,14 +199,8 @@ type
     class*: Type
     access*: set[Access]
     superclass*: MaybeType
-    # interfaces: TypeList
-    # sourcefile: String
-    # annotations: ?
     class_data*: ClassData
-    # static_values: ?
   ClassData* = ref object
-    # static_fields*: ?
-    #TODO: add some tests for rendered instance_fields
     instance_fields*: seq[EncodedField]
     direct_methods*: seq[EncodedMethod]
     virtual_methods*: seq[EncodedMethod]
@@ -710,8 +699,6 @@ proc render*(dex: Dex): string =
   for i in 0 ..< 20:
     blob.string[0x0c + i] = sha1[i].char
   blob[slots.adlerSum] = adler32(blob.string.substr(0x0c))
-  # stderr.write(blob.string.dumpHex)
-  # stderr.write("\n")
 
   return blob.string
 
