@@ -7,7 +7,7 @@ BUILD_DIR=$(realpath "/tmp/android-build")
 ### create apk
 ANDROID_JAR="$(ls -d ${SDK}/platforms/*/ | tail -n 1)/android.jar"
 BUILD_TOOLS=$(ls -d ${SDK}/build-tools/*/ | tail -n 1)
-nim compile -f --run nim/main.nim
+java -jar ./smali/smali.jar assemble ./smali -o ${BUILD_DIR}/apk/classes.dex
 "${BUILD_TOOLS}/aapt" package -f -M AndroidManifest.xml -I $ANDROID_JAR -F $BUILD_DIR/app.apk $BUILD_DIR/apk
 
 ### sign apk
@@ -18,6 +18,6 @@ nim compile -f --run nim/main.nim
     --ks-pass pass:android --key-pass pass:android --out $BUILD_DIR/app.signed.apk $BUILD_DIR/app.aligned.apk
 
 ### install apk
-"${SDK}/platform-tools/adb" uninstall com.akavel.hello
+"${SDK}/platform-tools/adb" uninstall com.andreas.hello
 "${SDK}/platform-tools/adb" install -r $BUILD_DIR/app.signed.apk
-"${SDK}/platform-tools/adb" shell am start -n com.akavel.hello/.HelloAndroid
+"${SDK}/platform-tools/adb" shell am start -n com.andreas.hello/.HelloAndroid
