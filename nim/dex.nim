@@ -1,11 +1,5 @@
 
-import critbits
-import strutils
-import sequtils
-import std/sha1
-import tables
-import hashes
-import bitops
+import critbits, strutils, sequtils, std/sha1, tables, hashes, bitops
 
 import patty
 
