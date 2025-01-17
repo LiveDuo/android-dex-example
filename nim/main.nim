@@ -3,11 +3,9 @@ include dex
 import dex
 include hex
 
-# nimble install
 # nim compile -f --run nim/main.nim
 
 let dex2 = newDex()
-#-- Prime some arrays, to make sure their order matches hello_android_apk
 dex2.addStr"<init>"
 dex2.addStr"I"
 dex2.addStr"Landroid/app/Activity;"
