@@ -8,7 +8,7 @@ BUILD_DIR=$(realpath "/tmp/android-build")
 mkdir -p "/tmp/android-build/apk"
 ANDROID_JAR="$(ls -d ${SDK}/platforms/*/ | tail -n 1)/android.jar"
 BUILD_TOOLS=$(ls -d ${SDK}/build-tools/*/ | tail -n 1)
-nim compile -f --run nim/main.nim
+nim r -f nim/main.nim
 "${BUILD_TOOLS}/aapt" package -f -M AndroidManifest.xml -I $ANDROID_JAR -F $BUILD_DIR/app.apk $BUILD_DIR/apk
 
 ### sign apk

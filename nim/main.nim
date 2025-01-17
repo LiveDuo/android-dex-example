@@ -1,7 +1,7 @@
 
 include dex
 
-# nim compile -f --run nim/main.nim
+# nim r -f nim/main.nim
 
 let dex2 = newDex()
 dex2.classes.add(ClassDef(
