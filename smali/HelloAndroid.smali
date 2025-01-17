@@ -13,15 +13,10 @@
 
     invoke-super {p0, p1}, Landroid/app/Activity;->onCreate(Landroid/os/Bundle;)V
 
-    # new text
+    const-string v0, "hello"
     new-instance p1, Landroid/widget/TextView;
     invoke-direct {p1, p0}, Landroid/widget/TextView;-><init>(Landroid/content/Context;)V
-
-    # set text
-    const-string v0, "hello"
     invoke-virtual {p1, v0}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
-
-    # set content view
     invoke-virtual {p0, p1}, Lcom/andreas/hello/HelloAndroid;->setContentView(Landroid/view/View;)V
 
     return-void
