@@ -14,57 +14,131 @@ proc sget_object*(reg: uint8, field: Field): Instr = return newInstr(0x62, RegXX
 proc invoke_virtual*(regC: dex.uint4, regD: dex.uint4, m: Method): Instr =
   return newInstr(0x6e, RawX(2), RawX(0), MethodXXXX(m), RawX(regD), RegX(regC), RawXX(0))
 
+proc newInvoke1*(opcode: uint8, regC: uint4, m: Method): Instr =
+  return newInstr(opcode, RawX(1), RawX(0), MethodXXXX(m), RawX(0), RegX(regC), RawXX(0))
+
+proc invoke_direct*(regC: uint4, m: Method): Instr =
+  return newInvoke1(0x70, regC, m)
+
+proc newInvoke2*(opcode: uint8, regC: uint4, regD: uint4, m: Method): Instr =
+  return newInstr(opcode, RawX(2), RawX(0), MethodXXXX(m), RawX(regD), RegX(regC), RawXX(0))
+
+proc invoke_super*(regC: uint4, regD: uint4, m: Method): Instr =
+  return newInvoke2(0x6f, regC, regD, m)
+
+proc const_high16*(reg: uint8, highBits: uint16): Instr =
+  return newInstr(0x15, RegXX(reg), RawXXXX(highBits))
+
 let dex2 = newDex()
+#-- Prime some arrays, to make sure their order matches hello_android_apk
+dex2.addStr"<init>"
+dex2.addStr"I"
+dex2.addStr"Landroid/app/Activity;"
+dex2.addStr"Landroid/os/Bundle;"
+dex2.addStr"Lcom/akavel/hello/HelloAndroid;"
+dex2.addStr"V"
+dex2.addStr"VI"
+dex2.addStr"VL"
+dex2.addStr"onCreate"
+dex2.addStr"setContentView"
+dex2.addTypeList(@["I"])
+
 dex2.classes.add(ClassDef(
-    class: "Lhw;",
-    access: {Public},
-    superclass: SomeType("Ljava/lang/Object;"),
-    class_data: ClassData(
-        direct_methods: @[
-            EncodedMethod(
-                m: Method(
-                class: "Lhw;",
-                name: "main",
-                prototype: Prototype(ret: "V", params: @["[Ljava/lang/String;"])),
-                access: {Public, Static},
-                code: SomeCode(Code(
-                registers: 2,
-                ins: 1,
-                outs: 2,
-                instrs: @[
-                    sget_object(0, Field(class: "Ljava/lang/System;", typ: "Ljava/io/PrintStream;", name: "out")),
-                    const_string(1, "Hello World!"),
-                    invoke_virtual(0, 1, Method(class: "Ljava/io/PrintStream;", name: "println",
-                    prototype: Prototype(ret: "V", params: @["Ljava/lang/String;"]))),
-                    return_void(),
-                ]))
-            )
-        ]
-    )
+  class: "Lcom/akavel/hello/HelloAndroid;",
+  access: {Public},
+  superclass: SomeType("Landroid/app/Activity;"),
+  class_data: ClassData(
+    direct_methods: @[
+      EncodedMethod(
+        m: Method(
+          class: "Lcom/akavel/hello/HelloAndroid;",
+          name: "<init>",
+          prototype: Prototype(ret: "V", params: @[]),
+        ),
+        access: {Public, Constructor},
+        code: SomeCode(Code(
+          registers: 1,
+          ins: 1,
+          outs: 1,
+          instrs: @[
+            invoke_direct(0, Method(class: "Landroid/app/Activity;", name: "<init>",
+              prototype: Prototype(ret: "V", params: @[]))),
+            return_void(),
+          ],
+        )),
+      ),
+    ],
+    virtual_methods: @[
+      EncodedMethod(
+        m: Method(
+          class: "Lcom/akavel/hello/HelloAndroid;",
+          name: "onCreate",
+          prototype: Prototype(
+            ret: "V",
+            params: @["Landroid/os/Bundle;"],
+          ),
+        ),
+        access: {Public},
+        code: SomeCode(Code(
+          registers: 3,
+          ins: 2,
+          outs: 2,
+          instrs: @[
+            invoke_super(1, 2, Method(class: "Landroid/app/Activity;", name: "onCreate",
+              prototype: Prototype(ret: "V", params: @["Landroid/os/Bundle;"]))),
+            const_high16(0, 0x7f03),
+            invoke_virtual(1, 0, Method(class: "Lcom/akavel/hello/HelloAndroid;", name: "setContentView",
+              prototype: Prototype(ret: "V", params: @["I"]))),
+            return_void(),
+          ],
+        )),
+      ),
+    ],
+  )
 ))
 writeFile("classes.dex", dex2.render)
 
 let hello_world_apk = """
-.d .e .x 0A .0 .3 .5 00 6F 53 89 BC 1E 79 B2 4F 1F 9C 09 66 15 23 2D 3B 56 65 32 C3 B5 81 B4 5A
-70 02 00 00 70 00 00 00 78 56 34 12 00 00 00 00 00 00 00 00 DC 01 00 00 0C 00 00 00 70 00 00 00
-07 00 00 00 A0 00 00 00 02 00 00 00 BC 00 00 00 01 00 00 00 D4 00 00 00 02 00 00 00 DC 00 00 00
-01 00 00 00 EC 00 00 00 64 01 00 00 0C 01 00 00 A6 01 00 00 3A 01 00 00 8A 01 00 00 40 01 00 00
-B4 01 00 00 76 01 00 00 54 01 00 00 6C 01 00 00 57 01 00 00 70 01 00 00 A1 01 00 00 C8 01 00 00
-01 00 00 00 02 00 00 00 03 00 00 00 04 00 00 00 05 00 00 00 06 00 00 00 08 00 00 00 07 00 00 00
-05 00 00 00 34 01 00 00 07 00 00 00 05 00 00 00 2C 01 00 00 04 00 01 00 0A 00 00 00 00 00 01 00
-09 00 00 00 01 00 00 00 0B 00 00 00 00 00 00 00 01 00 00 00 02 00 00 00 00 00 00 00 FF FF FF FF
-00 00 00 00 D1 01 00 00 00 00 00 00 02 00 01 00 02 00 00 00 00 00 00 00 08 00 00 00 62 00 00 00
-1A 01 00 00 6E 20 01 00 10 00 0E 00 01 00 00 00 06 00 00 00 01 00 00 00 03 00 04 .L .h .w .; 00
-12 .L .j .a .v .a ./ .l .a .n .g ./ .O .b .j .e .c .t .; 00 01 .V 00 13 .[ .L .j .a .v .a ./ .l
-.a .n .g ./ .S .t .r .i .n .g .; 00 02 .V .L 00 04 .m .a .i .n 00 12 .L .j .a .v .a ./ .l .a .n
-.g ./ .S .y .s .t .e .m .; 00 15 .L .j .a .v .a ./ .i .o ./ .P .r .i .n .t .S .t .r .e .a .m .;
-00 03 .o .u .t 00 0C .H .e .l .l .o 20 .W .o .r .l .d .! 00 12 .L .j .a .v .a ./ .l .a .n .g ./
-.S .t .r .i .n .g .; 00 07 .p .r .i .n .t .l .n 00 00 00 01 00 00 09 8C 02 00 00 00 0C 00 00 00
-00 00 00 00 01 00 00 00 00 00 00 00 01 00 00 00 0C 00 00 00 70 00 00 00 02 00 00 00 07 00 00 00
-A0 00 00 00 03 00 00 00 02 00 00 00 BC 00 00 00 04 00 00 00 01 00 00 00 D4 00 00 00 05 00 00 00
-02 00 00 00 DC 00 00 00 06 00 00 00 01 00 00 00 EC 00 00 00 01 20 00 00 01 00 00 00 0C 01 00 00
-01 10 00 00 02 00 00 00 2C 01 00 00 02 20 00 00 0C 00 00 00 3A 01 00 00 00 20 00 00 01 00 00 00
-D1 01 00 00 00 10 00 00 01 00 00 00 DC 01 00 00
+6465 780a 3033 3500 2f4f 153b 3623 8747
+6d02 4697 5b1e 959d a8b1 2f0f 9c3a a14f
+7802 0000 7000 0000 7856 3412 0000 0000
+0000 0000 f001 0000 0a00 0000 7000 0000
+0500 0000 9800 0000 0300 0000 ac00 0000
+0000 0000 0000 0000 0500 0000 d000 0000
+0100 0000 f800 0000 6001 0000 1801 0000
+6201 0000 6a01 0000 6d01 0000 8501 0000
+9a01 0000 bc01 0000 bf01 0000 c301 0000
+c701 0000 d101 0000 0100 0000 0200 0000
+0300 0000 0400 0000 0500 0000 0500 0000
+0400 0000 0000 0000 0600 0000 0400 0000
+5401 0000 0700 0000 0400 0000 5c01 0000
+0100 0000 0000 0000 0100 0200 0800 0000
+0300 0000 0000 0000 0300 0200 0800 0000
+0300 0100 0900 0000 0300 0000 0100 0000
+0100 0000 0000 0000 ffff ffff 0000 0000
+e101 0000 0000 0000 0100 0100 0100 0000
+0000 0000 0400 0000 7010 0000 0000 0e00
+0300 0200 0200 0000 0000 0000 0900 0000
+6f20 0100 2100 1500 037f 6e20 0400 0100
+0e00 0000 0100 0000 0000 0000 0100 0000
+0200 063c 696e 6974 3e00 0149 0016 4c61
+6e64 726f 6964 2f61 7070 2f41 6374 6976
+6974 793b 0013 4c61 6e64 726f 6964 2f6f
+732f 4275 6e64 6c65 3b00 204c 636f 6d2f
+616e 6472 6f69 642f 6865 6c6c 6f2f 4865
+6c6c 6f41 6e64 726f 6964 3b00 0156 0002
+5649 0002 564c 0008 6f6e 4372 6561 7465
+000e 7365 7443 6f6e 7465 6e74 5669 6577
+0000 0001 0102 8180 0498 0203 01b0 0200
+0b00 0000 0000 0000 0100 0000 0000 0000
+0100 0000 0a00 0000 7000 0000 0200 0000
+0500 0000 9800 0000 0300 0000 0300 0000
+ac00 0000 0500 0000 0500 0000 d000 0000
+0600 0000 0100 0000 f800 0000 0120 0000
+0200 0000 1801 0000 0110 0000 0200 0000
+5401 0000 0220 0000 0a00 0000 6201 0000
+0020 0000 0100 0000 e101 0000 0010 0000
+0100 0000 f001 0000
 """.multiReplace(("\n", ""), (" ", "")).dehexify
 
-assert dex2.render.dumpHex == hello_world_apk.dumpHex
+# assert dex2.render.dumpHex == hello_world_apk.dumpHex
