@@ -2,19 +2,18 @@
 import critbits, strutils, sequtils, std/sha1, tables, hashes, bitops
 
 
-
 ####################################
 ##### Types
 ####################################
 
-type Field = ref object
+type Field = object
     class: string
     typ: string
     name: string
-type Prototype = ref object
+type Prototype = object
     ret: string
     params: seq[string]
-type Method = ref object
+type Method = object
     class: string
     prototype: Prototype  # a.k.a. method signature
     name: string
@@ -47,20 +46,6 @@ proc MethodXXXX(method16: Method): Arg = Arg(kind: ArgKind.MethodXXXX, method16:
 
 
 
-
-type Instr = ref object
-    opcode: uint8
-    args: seq[Arg]
-type Code = ref object
-    registers: uint16
-    ins: uint16
-    outs: uint16
-    instrs: seq[Instr]
-
-
-
-
-
 type MaybeTypeKind = enum SomeType, NoType
 type MaybeType = object
     case kind: MaybeTypeKind
@@ -68,6 +53,14 @@ type MaybeType = object
     of MaybeTypeKind.NoType: nil
 
 
+type Instr = object
+    opcode: uint8
+    args: seq[Arg]
+type Code = object
+    registers: uint16
+    ins: uint16
+    outs: uint16
+    instrs: seq[Instr]
 
 type MaybeCodeKind = enum SomeCode, NoCode
 type MaybeCode = object
@@ -76,24 +69,7 @@ type MaybeCode = object
     of MaybeCodeKind.NoCode: nil
 
 
-type
-  ClassDef = ref object
-    class: string
-    access: set[Access]
-    superclass: MaybeType
-    class_data: ClassData
-  ClassData = ref object
-    instance_fields: seq[EncodedField]
-    direct_methods: seq[EncodedMethod]
-    virtual_methods: seq[EncodedMethod]
-  EncodedField = ref object
-    f: Field
-    access: set[Access]
-  EncodedMethod = ref object
-    m: Method
-    access: set[Access]
-    code: MaybeCode
-  Access = enum
+type Access = enum
     Public = 0x1
     Private = 0x2
     Protected = 0x4
@@ -107,22 +83,32 @@ type
     Annotation = 0x2000
     Enum = 0x4000
     Constructor = 0x1_0000
+type EncodedField = object
+    f: Field
+    access: set[Access]
+type EncodedMethod = object
+    m: Method
+    access: set[Access]
+    code: MaybeCode
+type ClassData = object
+    instance_fields: seq[EncodedField]
+    direct_methods: seq[EncodedMethod]
+    virtual_methods: seq[EncodedMethod]
+type ClassDef = object
+    class: string
+    access: set[Access]
+    superclass: MaybeType
+    class_data: ClassData
 
-type
-  Dex = ref object
-    # Note: below fields are generally ordered from simplest to more complex
-    # (in order of dependency)
+type Dex = ref object
     strings: CritBitTree[int]  # value: order of addition
     types: seq[string]
     typeLists: seq[seq[string]]
-    # NOTE: prototypes must have no duplicates, TODO: and be sorted by:
-    # (ret's type ID; args' type ID)
+    # NOTE: prototypes must have no duplicates, TODO: and be sorted by: (ret's type ID; args' type ID)
     prototypes: seq[Prototype]
-    # NOTE: fields must have no duplicates, TODO: and be sorted by:
-    # (class type ID, field name's string ID, field's type ID)
+    # NOTE: fields must have no duplicates, TODO: and be sorted by: (class type ID, field name's string ID, field's type ID)
     fields: seq[tuple[class: string, name: string, typ: string]]
-    # NOTE: methods must have no duplicates, TODO: and be sorted by:
-    # (class type ID, name's string ID, prototype's proto ID)
+    # NOTE: methods must have no duplicates, TODO: and be sorted by: (class type ID, name's string ID, prototype's proto ID)
     methods: seq[tuple[class: string, name: string, proto: Prototype]]
     classes: seq[ClassDef]
 
@@ -197,17 +183,16 @@ proc invoke_direct_2(regC: uint4, regD: uint4, m: Method): Instr =
 ##### Helper functions
 ####################################
 
-
 proc skip(b: var string, n: int) =
   b.setLen(b.len + n)
   for i in b.len ..< b.len:
     b[i] = chr(0)
 
 proc set(b: var string, slot: int, v: uint32) =
-  b[slot.int+0] = chr(v and 0xff)
-  b[slot.int+1] = chr(v shr 8 and 0xff)
-  b[slot.int+2] = chr(v shr 16 and 0xff)
-  b[slot.int+3] = chr(v shr 24 and 0xff)
+  b[slot.int] = chr(v and 0xff)
+  b[slot.int + 1] = chr(v shr 8 and 0xff)
+  b[slot.int + 2] = chr(v shr 16 and 0xff)
+  b[slot.int + 3] = chr(v shr 24 and 0xff)
 
 proc putString(b: var string, v: string) =
   var s = b
@@ -266,15 +251,15 @@ proc putUleb128(b: var string, v: uint32) =
 
 proc insert[T](s: var seq[T], item: T) =
   let i = s.find(item)
-  if i == seq[T](s).len or item < seq[T](s)[i]:
-    seq[T](s).insert(item, i)
+  if i == s.len or item < s[i]:
+    s.insert(item, i)
 
 proc find[T](s: seq[T], item: T): int =
-  var i = seq[T](s).len
+  var i = s.len
   while result < i:
     let mid = (result + i) shr 1
-    if item < seq[T](s)[mid]: i = mid
-    elif seq[T](s)[mid] < item: result = mid + 1
+    if item < s[mid]: i = mid
+    elif s[mid] < item: result = mid + 1
     else: return mid
 
 proc hash(proto: Prototype): Hash =
@@ -348,8 +333,7 @@ proc addMethod(dex: Dex, m: Method) =
 
 proc render(dex: Dex): string =
 
-  # Collect strings and all the things from classes.
-  # (types, prototypes/signatures, fields, methods)
+  # Collect strings and all the things from classes (types, prototypes/signatures, fields, methods)
   for c in dex.classes:
     discard dex.strings.containsOrIncl(c.class, dex.strings.len)
     dex.types.insert(c.class)
@@ -365,16 +349,6 @@ proc render(dex: Dex): string =
         for instr in dm.code.code.instrs:
           for arg in instr.args:
             case arg.kind
-            of RawX:
-              discard
-            of RawXX:
-              discard
-            of RawXXXX:
-              discard
-            of RegX:
-              discard
-            of RegXX:
-              discard
             of FieldXXXX:
               dex.addField(arg.field16)
             of StringXXXX:
@@ -384,19 +358,12 @@ proc render(dex: Dex): string =
               dex.types.insert(arg.type16)
             of MethodXXXX:
               dex.addMethod(arg.method16)
+            else:
+              discard
 
-  # Storage for offsets where various sections of the file
-  # start. Will be needed to render map_list.
-  # NOTE: n is number of elements in the section, not length in bytes.
-  var sections: seq[tuple[kind: uint16, pos: uint32, n: int]]
-
-  # blob is the buffer where we will render the binary contents of the .dex file
-  var blob: string
-
-  # slots are places in the blob, where we can't put data immediately. That's
-  # because the value that should be there depends on some data further along
-  # in the file. We bookmark some space for them in the blob, for filling in
-  # later, when we will know what to put in the slot.
+  # slots are places in the blob, where we can't put data immediately. That's because the value that should be there
+  # depends on some data further along in the file. We bookmark some space for them in the blob, for filling in later
+  # when we will know what to put in the slot.
   var slots: tuple[
     adlerSum: int,
     fileSize: int,
@@ -414,36 +381,37 @@ proc render(dex: Dex): string =
   slots.stringOffsets.setLen(dex.strings.len)
 
   #-- Partially render header
-  # Most of it can only be calculated after the rest of the segments.
+  # Storage for offsets where various sections of the file start. Will be needed to render map_list.
+  # NOTE: n is number of elements in the section, not length in bytes.
+  var blob: string
+  var sections: seq[tuple[kind: uint16, pos: uint32, n: int]]
   sections.add (0x0000'u16, blob.len.uint32, 1)
   # TODO: handle various versions of targetSdkVersion file, not only 035
   blob.putString  "dex\n035\x00"       # Magic prefix
+
   slots.adlerSum = blob.put32
   blob.skip(20)                   # SHA1 sum; we will fill it much later
   slots.fileSize = blob.put32
   blob.put32 0x70                 # Header size
   blob.put32 0x12345678   # Endian constant
+
   blob.put32 0            # link_size
   blob.put32 0            # link_off
   slots.mapOffset = blob.put32
   blob.put32 dex.strings.len.uint32
   slots.stringIdsOff = blob.put32
-  blob.put32 seq[string](dex.types).len.uint32
+  blob.put32 dex.types.len.uint32
   slots.typeIdsOff = blob.put32
-  blob.put32 seq[Prototype](dex.prototypes).len.uint32
+  blob.put32 dex.prototypes.len.uint32
   slots.protoIdsOff = blob.put32
-  blob.put32 seq[tuple[class: string, name: string, typ: string]](dex.fields).len.uint32
+  blob.put32 dex.fields.len.uint32
   slots.fieldIdsOff = blob.put32
-  blob.put32 seq[tuple[class: string, name: string, proto: Prototype]](dex.methods).len.uint32
+  blob.put32 dex.methods.len.uint32
   slots.methodIdsOff = blob.put32
   blob.put32 dex.classes.len.uint32
   slots.classDefsOff = blob.put32
   slots.dataSize = blob.put32
   slots.dataOff = blob.put32
-
-  echo "header"
-  let bytes = cast[seq[byte]](blob)
-  echo bytes.map(proc(c: byte): string = c.ord.toHex(2)).join(" ")
 
   #-- Partially render string_ids
   # We preallocate space for the list of string offsets. We cannot fill it yet, as its contents
@@ -454,7 +422,7 @@ proc render(dex: Dex): string =
     slots.stringOffsets[i] = blob.put32
 
   #-- Render typeIDs.
-  sections.add (0x0002'u16, blob.len.uint32, seq[string](dex.types).len)
+  sections.add (0x0002'u16, blob.len.uint32, dex.types.len)
   blob.set(slots.typeIdsOff, blob.len.uint32)
 
   var stringIds = newSeq[int](dex.strings.len)
@@ -463,14 +431,14 @@ proc render(dex: Dex): string =
     stringIds[added] = i
     inc i
 
-  for t in seq[string](dex.types):
+  for t in dex.types:
     blob.put32 stringIds[dex.strings[t]].uint32
 
   #-- Partially render proto IDs.
-  sections.add (0x0003'u16, blob.len.uint32, seq[Prototype](dex.prototypes).len)
+  sections.add (0x0003'u16, blob.len.uint32, dex.prototypes.len)
   blob.set(slots.protoIdsOff, blob.len.uint32)
   var typeListOffsets: Table[seq[string], seq[int]]
-  for p in seq[Prototype](dex.prototypes):
+  for p in dex.prototypes:
     let desc = (p.ret & p.params).map(typeChar).join
     blob.put32 stringIds[dex.strings[desc]].uint32
     blob.put32 dex.types.find(p.ret).uint32
@@ -478,19 +446,19 @@ proc render(dex: Dex): string =
     typeListOffsets.mgetOrPut(p.params, newSeq[int]()).add(slot)
 
   #-- Render field IDs
-  if seq[tuple[class: string, name: string, typ: string]](dex.fields).len > 0:
-    sections.add (0x0004'u16, blob.len.uint32, seq[tuple[class: string, name: string, typ: string]](dex.fields).len)
+  if dex.fields.len > 0:
+    sections.add (0x0004'u16, blob.len.uint32, dex.fields.len)
     blob.set(slots.fieldIdsOff, blob.len.uint32)
-  for f in seq[tuple[class: string, name: string, typ: string]](dex.fields):
+  for f in dex.fields:
     blob.put16 dex.types.find(f.class).uint16
     blob.put16 dex.types.find(f.typ).uint16
     blob.put32 stringIds[dex.strings[f.name]].uint32
 
   #-- Render method IDs
-  sections.add (0x0005'u16, blob.len.uint32, seq[tuple[class: string, name: string, proto: Prototype]](dex.methods).len)
-  if seq[tuple[class: string, name: string, proto: Prototype]](dex.methods).len > 0:
+  sections.add (0x0005'u16, blob.len.uint32, dex.methods.len)
+  if dex.methods.len > 0:
     blob.set(slots.methodIdsOff, blob.len.uint32)
-  for m in seq[tuple[class: string, name: string, proto: Prototype]](dex.methods):
+  for m in dex.methods:
     blob.put16 dex.types.find(m.class).uint16
     blob.put16 dex.prototypes.find(m.proto).uint16
     blob.put32 stringIds[dex.strings[m.name]].uint32
@@ -520,31 +488,27 @@ proc render(dex: Dex): string =
   #-- Render code items
   let dataStart = blob.len.uint32
   blob.set(slots.dataOff, blob.len.uint32)
-  var
-    codeItems = 0
-    codeOffsets: Table[tuple[class: string, name: string, proto: Prototype], uint32]
+  var codeItems = 0
+  var codeOffsets: Table[tuple[class: string, name: string, proto: Prototype], uint32]
   for c in dex.classes:
-    let cd = c.class_data
-    for dm in cd.direct_methods & cd.virtual_methods:
+    for dm in c.class_data.direct_methods & c.class_data.virtual_methods:
+
       if dm.code.kind == MaybeCodeKind.SomeCode:
         codeItems.inc()
-        let code = dm.code.code
         blob.pad32()
         let tupl = (class: dm.m.class, name: dm.m.name, proto: dm.m.prototype)
         codeOffsets[tupl] = blob.len.uint32
-        blob.put16 code.registers
-        blob.put16 code.ins
-        blob.put16 code.outs
+        blob.put16 dm.code.code.registers
+        blob.put16 dm.code.code.ins
+        blob.put16 dm.code.code.outs
         blob.put16 0'u16   # TODO: tries_size
         blob.put32 0'u32   # TODO: debug_info_off
-        let slot = blob.put32   # This shall be filled with size of instrs, in 16-bit code units
 
-        var
-          high = true
-        for instr in code.instrs:
+        let slot = blob.put32   # This shall be filled with size of instrs, in 16-bit code units
+        var high = true
+        for instr in dm.code.code.instrs:
           blob.putString($instr.opcode.chr)
           for arg in instr.args:
-
             case arg.kind
             of RawX:
               blob.put4 arg.raw4, high
@@ -559,15 +523,17 @@ proc render(dex: Dex): string =
             of RegXX:
               blob.putString($arg.reg8.chr)
             of FieldXXXX:
-              let v = arg.field16
-              blob.put16 dex.fields.find((v.class, v.name, v.typ)).uint16
+              let field = dex.fields.find((arg.field16.class, arg.field16.name, arg.field16.typ))
+              blob.put16 field.uint16
             of StringXXXX:
-              blob.put16 stringIds[dex.strings[arg.string16]].uint16
+              let str = stringIds[dex.strings[arg.string16]]
+              blob.put16 str.uint16
             of TypeXXXX:
-              blob.put16 dex.types.find(arg.type16).uint16
+              let ty = dex.types.find(arg.type16)
+              blob.put16 ty.uint16
             of MethodXXXX:
-              let v = arg.method16
-              blob.put16 dex.methods.find((v.class, v.name, v.prototype)).uint16
+              let mth = dex.methods.find((arg.method16.class, arg.method16.name, arg.method16.prototype))
+              blob.put16 mth.uint16
 
         blob.set(slot, (blob.len.uint32 - slot.uint32 - 4) div 2)
   if codeItems > 0:
@@ -587,14 +553,10 @@ proc render(dex: Dex): string =
 
   #-- Render strings data
   sections.add (0x2002'u16, blob.len.uint32, dex.strings.len)
-
   var stringSequence = newSeq[string](dex.strings.len)
-  for s, added in dex.strings:
-    stringSequence[added] = s
-
+  for s, added in dex.strings: stringSequence[added] = s
   for s in stringSequence:
-    let slot = slots.stringOffsets[stringIds[dex.strings[s]]]
-    blob.set(slot, blob.len.uint32)
+    blob.set(slots.stringOffsets[stringIds[dex.strings[s]]], blob.len.uint32)
     blob.putUleb128 s.len.uint32
     blob.putString s & "\x00"
 
@@ -603,15 +565,14 @@ proc render(dex: Dex): string =
   for c in dex.classes:
     if classDataOffsets.contains(c.class):
       for slot in classDataOffsets[c.class]: blob.set(slot, blob.len.uint32)
-    let d = c.class_data
     blob.putUleb128 0
-    blob.putUleb128 d.instance_fields.len.uint32
-    blob.putUleb128 d.direct_methods.len.uint32
-    blob.putUleb128 d.virtual_methods.len.uint32
+    blob.putUleb128 c.class_data.instance_fields.len.uint32
+    blob.putUleb128 c.class_data.direct_methods.len.uint32
+    blob.putUleb128 c.class_data.virtual_methods.len.uint32
 
     # renderEncodedFields
     var prev = 0
-    for f in d.instance_fields:
+    for f in c.class_data.instance_fields:
       let tupl = (class: f.f.class, name: f.f.name, typ: f.f.typ)
       let idx = dex.fields.find(tupl)
       blob.putUleb128 uint32(idx - prev)
@@ -620,29 +581,25 @@ proc render(dex: Dex): string =
 
     # renderEncodedMethods (direct)
     var prev2 = 0
-    for m in d.direct_methods:
+    for m in c.class_data.direct_methods:
       let tupl = (class: m.m.class, name: m.m.name, proto: m.m.prototype)
       let idx = dex.methods.find(tupl)
       blob.putUleb128 uint32(idx - prev2)
       prev2 = idx
       blob.putUleb128 m.access.foldl(a or b.ord.uint32, 0'u32)
-      if Native notin m.access and Abstract notin m.access:
-        blob.putUleb128 codeOffsets[tupl]
-      else:
-        blob.putUleb128 0
+      if Native notin m.access and Abstract notin m.access: blob.putUleb128 codeOffsets[tupl]
+      else: blob.putUleb128 0
 
     # renderEncodedMethods (virtual)
     var prev3 = 0
-    for m in d.virtual_methods:
+    for m in c.class_data.virtual_methods:
       let tupl = (class: m.m.class, name: m.m.name, proto: m.m.prototype)
       let idx = dex.methods.find(tupl)
       blob.putUleb128 uint32(idx - prev3)
       prev3 = idx
       blob.putUleb128 m.access.foldl(a or b.ord.uint32, 0'u32)
-      if Native notin m.access and Abstract notin m.access:
-        blob.putUleb128 codeOffsets[tupl]
-      else:
-        blob.putUleb128 0
+      if Native notin m.access and Abstract notin m.access: blob.putUleb128 codeOffsets[tupl]
+      else: blob.putUleb128 0
 
   #-- Render map_list
   blob.pad32()
@@ -730,4 +687,6 @@ dexData.classes.add(ClassDef(
   )
 ))
 
+# nim r -f src/main.nim
+# echo cast[seq[byte]](blob).map(proc(c: byte): string = c.ord.toHex(2)).join(" ")
 writeFile("/tmp/android-build/apk/classes.dex", dexData.render)
